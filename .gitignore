@@ -1,0 +1,37 @@
+# ========================
+# Node.js / 前端忽略规则
+# ========================
+frontend/node_modules/
+frontend/dist/
+frontend/.eslintcache
+npm-debug.log*
+yarn-error.log*
+
+# ========================
+# Python / 后端忽略规则
+# ========================
+# 忽略所有虚拟环境
+.conda/
+.venv/
+venv/
+env/
+
+# 忽略 Python 编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ========================
+# 业务产生的数据与日志 (极其重要)
+# ========================
+# 绝对不能把工厂真实的日志、缓存图和报表传到公网代码库
+*.log
+*.xlsx
+.ui_thumbs_cache/
+ui_config.json
+
+# ========================
+# 操作系统级垃圾文件
+# ========================
+.DS_Store
+Thumbs.db
