@@ -1,0 +1,7 @@
+{
+  "name": "digital-twin-root",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix frontend start"
+  }
+}
