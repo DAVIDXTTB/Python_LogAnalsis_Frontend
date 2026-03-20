@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+  
     "api": "cd ../backend && /Users/tantianxing/INTERNSHIP-Company/1-28/.conda/bin/python server.py",
+    
     "start": "concurrently -c \"cyan.bold,green.bold\" -n \"后端引擎,前端UI\" \"npm run api\" \"npm run dev\""
   },
   "dependencies": {
