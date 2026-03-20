@@ -19,7 +19,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # 安装 OpenCV 依赖的底层 C++ 动态链接库
-RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
 
 # 复制后端依赖清单并安装
 COPY backend/requirements.txt ./backend/
