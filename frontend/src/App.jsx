@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList 
+  PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { 
   Cpu, Calendar, Settings, Activity, Clock, Target, Download, RefreshCw, X
@@ -13,7 +13,8 @@ const App = () => {
   const [statusMsg, setStatusMsg] = useState('等待连接 API...');
   
   const [uiData, setUiData] = useState({
-      error: [], warning: [], normal: [], ignore: [], chart: [],
+      error: [], warning: [], normal: [], ignore: [], 
+      pies: { primary: [], secondary: [], pallet: [], total: [] },
       kpi: { total: 0, exceptions: 0 }
   });
 
@@ -109,8 +110,6 @@ const App = () => {
     }
   };
 
-  const sortedChartData = [...uiData.chart].sort((a, b) => b.time - a.time);
-
   const renderPartItem = (item, colorClass) => (
     <div 
       key={item.uid} 
@@ -134,15 +133,36 @@ const App = () => {
     </div>
   );
 
+  // 🌟 通用的饼图渲染函数
+  const COLORS = { '🟢 正常': '#22c55e', '🟡 警戒': '#f59e0b', '🔴 异常': '#ef4444' };
+  const renderPie = (data, title) => (
+      <div className="flex flex-col items-center justify-center h-48 bg-[#020617] rounded-lg border border-[#1e293b] p-2 relative shadow-inner">
+          <h4 className="text-[10px] text-slate-400 font-bold mb-1 absolute top-2 left-3 tracking-widest">{title}</h4>
+          {data && data.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                      <Pie data={data} innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
+                          {data.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[entry.name]} stroke="rgba(0,0,0,0)" />
+                          ))}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }} itemStyle={{ color: '#fff' }} />
+                      <Legend verticalAlign="bottom" height={20} iconType="circle" wrapperStyle={{fontSize: '10px'}}/>
+                  </PieChart>
+              </ResponsiveContainer>
+          ) : (
+              <div className="text-xs text-slate-600 font-mono flex-1 flex items-center justify-center">无数据 / 彻底剔除</div>
+          )}
+      </div>
+  );
+
   return (
     <div className="flex w-screen h-screen bg-[#020617] text-slate-200 overflow-hidden font-sans">
-      
-      {/* --- 左侧导航栏 --- */}
       <aside className="w-72 bg-[#0b1120] border-r border-[#1e293b] flex flex-col z-20 shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
         <div className="h-20 flex items-center px-6 border-b border-[#1e293b] bg-[#0f172a]">
           <Cpu className="text-blue-500 mr-3 shrink-0" size={28} />
           <div>
-            <h1 className="text-base font-black tracking-wider text-slate-100" style={{ fontSize: '100%' }}>华工小筑·生产数字看板</h1>
+            <h1 className="text-base font-black tracking-wider text-slate-100" style={{ fontSize: '85%' }}>华工小筑，数字看板</h1>
             <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Web API Edition</p>
           </div>
         </div>
@@ -180,10 +200,7 @@ const App = () => {
         </div>
       </aside>
 
-      {/* --- 右侧主工作区 --- */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-[#020617]">
-        
-        {/* 配置抽屉 */}
         {showConfig && (
             <div className="absolute top-0 left-0 w-full bg-[#0f172a]/95 backdrop-blur-md border-b border-[#1e293b] p-8 z-50 shadow-2xl">
                 <h3 className="text-lg font-bold mb-6 flex items-center text-slate-100"><Settings className="mr-2 text-blue-400"/> Python 后端路径映射配置</h3>
@@ -272,38 +289,20 @@ const App = () => {
 
                <div className="flex-1 bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 flex flex-col overflow-hidden shadow-lg">
                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-6 flex items-center shrink-0">
-                    <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布
+                    <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵 (Min)
                   </h3>
-                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
-                      {sortedChartData.length > 0 ? (
-                        <div style={{ height: Math.max(400, sortedChartData.length * 40) }}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={sortedChartData} layout="vertical" margin={{ right: 60, left: 10 }}>
-                              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#1e293b" />
-                              <XAxis type="number" hide />
-                              <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11, fontFamily: 'monospace'}} width={110} />
-                              <RechartsTooltip cursor={{fill: '#1e293b'}} contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }} />
-                              <Bar dataKey="time" barSize={16} radius={[0, 4, 4, 0]}>
-                                {sortedChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.status.includes('🔴') ? '#ef4444' : entry.status.includes('🟡') ? '#f59e0b' : '#22c55e'} />
-                                ))}
-                                <LabelList 
-                                    dataKey="time" 
-                                    position="right" 
-                                    formatter={(value) => `${value}m`} 
-                                    style={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace', fontWeight: 'bold' }} 
-                                />
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      ) : <div className="h-full flex items-center justify-center text-slate-600 font-mono text-sm">Waiting for data stream...</div>}
+                  
+                  {/* 🌟 替换区：从原本的单一 BarChart 替换为 4列的 Grid */}
+                  <div className="flex-1 grid grid-cols-4 gap-4 px-2 items-center">
+                      {renderPie(uiData.pies?.primary, "① 一次分拣")}
+                      {renderPie(uiData.pies?.secondary, "② 二次分拣")}
+                      {renderPie(uiData.pies?.pallet, "③ 码盘调度")}
+                      {renderPie(uiData.pies?.total, "◎ 总体进度 (P90)")}
                   </div>
                </div>
             </div>
         </div>
         
-        {/* ================= 🌟 二级界面：零件历史记录弹窗 ================= */}
         {isModalOpen && selectedPart && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
             <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[500px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">

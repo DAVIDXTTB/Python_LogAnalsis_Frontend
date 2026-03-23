@@ -66,10 +66,25 @@ def analyze_data(date_folder: str, refresh: bool = False):
     
     records = df.to_dict('records')
     
+    # 🌟 增加 pies 结构
     ui_data = {
         'error': [], 'warning': [], 'normal': [], 'ignore': [],
-        'kpi': {'total': len(records), 'exceptions': 0} 
+        'kpi': {'total': len(records), 'exceptions': 0},
+        'pies': {}
     }
+
+    pies_counts = {
+        'primary': {'🟢 正常': 0, '🟡 警戒': 0, '🔴 异常': 0},
+        'secondary': {'🟢 正常': 0, '🟡 警戒': 0, '🔴 异常': 0},
+        'pallet': {'🟢 正常': 0, '🟡 警戒': 0, '🔴 异常': 0},
+        'total': {'🟢 正常': 0, '🟡 警戒': 0, '🔴 异常': 0}
+    }
+
+    def categorize(dur):
+        if dur < 0: return None
+        if dur <= 1.0: return '🟢 正常'
+        elif dur <= 30.0: return '🟡 警戒'
+        else: return '🔴 异常'
     
     for row in records:
         uid = row.get('唯一编号 (Unique ID)', '')
@@ -77,22 +92,30 @@ def analyze_data(date_folder: str, refresh: bool = False):
         status = row.get('状态', '')
         duration = row.get('总耗时(分钟)', 0)
         
-        # 🌟 核心修改：返回相对路径给前端
         img_url = f"/thumbs/{date_folder}/{uid}.png" if row.get('UI微缩图') else None
         
-        # 🌟 提取并切割完整流程追踪数据
         history_raw = row.get('完整流程追踪', '')
         history_list = history_raw.split('\n') if history_raw else []
         
         item = {
-            'uid': uid, 
-            'part_no': part_no, 
-            'status': status, 
-            'duration': duration, 
-            'img_url': img_url,
-            'history': history_list
+            'uid': uid, 'part_no': part_no, 'status': status, 'duration': duration, 
+            'img_url': img_url, 'history': history_list
         }
         
+        # 🌟 累加各个分类的饼图数据
+        cat_pri = categorize(row.get('一次分拣耗时', -1.0))
+        if cat_pri: pies_counts['primary'][cat_pri] += 1
+            
+        cat_sec = categorize(row.get('二次分拣耗时', -1.0))
+        if cat_sec: pies_counts['secondary'][cat_sec] += 1
+            
+        cat_pal = categorize(row.get('码盘调度耗时', -1.0))
+        if cat_pal: pies_counts['pallet'][cat_pal] += 1
+            
+        if '🔴' in status: pies_counts['total']['🔴 异常'] += 1
+        elif '🟡' in status: pies_counts['total']['🟡 警戒'] += 1
+        elif '🟢' in status: pies_counts['total']['🟢 正常'] += 1
+
         if '🔴' in status: 
             ui_data['error'].append(item)
             ui_data['kpi']['exceptions'] += 1
@@ -100,8 +123,13 @@ def analyze_data(date_folder: str, refresh: bool = False):
         elif '🟢' in status: ui_data['normal'].append(item)
         else: ui_data['ignore'].append(item)
         
-    ui_data['chart'] = [{'name': r['唯一编号 (Unique ID)'], 'time': r['总耗时(分钟)'], 'status': r['状态']} 
-                        for r in records if '🤍' not in r.get('状态', '')]
+    def format_pie(d): return [{'name': k, 'value': v} for k, v in d.items() if v > 0]
+    ui_data['pies'] = {
+        'primary': format_pie(pies_counts['primary']),
+        'secondary': format_pie(pies_counts['secondary']),
+        'pallet': format_pie(pies_counts['pallet']),
+        'total': format_pie(pies_counts['total'])
+    }
     
     memory_cache[date_folder] = ui_data 
     return ui_data
@@ -129,9 +157,6 @@ def export_excel(date_folder: str):
     else:
         raise HTTPException(status_code=500, detail="Excel 生成失败")
 
-# ==========================================
-# 🌟 为 Docker 部署准备：接管前端编译后的静态文件
-# ==========================================
 frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")

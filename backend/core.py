@@ -47,7 +47,6 @@ class LogCore:
     REGEX_RESULT_LINE = re.compile(r"结果：(?P<json_data>\{.*\})")
     BASE_TIME_PATTERN = re.compile(r"^(?P<time>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})")
 
-    # ================= 2. 初始化与配置管理 =================
     def __init__(self):
         self.nesting_index = {}
         self.log_root = ""
@@ -55,7 +54,6 @@ class LogCore:
         self.load_config()
 
     def load_config(self):
-        """读取持久化配置"""
         if os.path.exists(self.CONFIG_FILE):
             try:
                 with open(self.CONFIG_FILE, 'r', encoding='utf-8') as f:
@@ -67,7 +65,6 @@ class LogCore:
             except: pass
 
     def save_config(self, log_root, nesting_root):
-        """保存前端发来的配置，并立即重建物理图纸索引"""
         self.log_root = log_root
         self.nesting_root = nesting_root
         with open(self.CONFIG_FILE, 'w', encoding='utf-8') as f:
@@ -120,13 +117,12 @@ class LogCore:
                 m = ptn.search(h)
                 if m: times.append(datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S.%f"))
             if len(times) >= 2:
-                times.sort() # 强制时序校准
+                times.sort() 
                 duration = (times[-1] - times[0]).total_seconds()
                 return round(duration / 60, 2), str(times[0]), str(times[-1])
         except: pass
         return 0.0, "", ""
 
-    # ================= 3. 核心解析与缓存生成 (适配 ui.py) =================
     def process_folder(self, folder_path):
         print(f"\n   -> 正在分析分拣数据: {os.path.basename(folder_path)} ...")
         parts_db = {} 
@@ -148,7 +144,6 @@ class LogCore:
         
         files.sort(key=get_log_index)
 
-        # --------- 日志读取代码块 ---------
         for file_name in files:
             file_path = os.path.join(folder_path, file_name)
             try:
@@ -254,13 +249,11 @@ class LogCore:
             except Exception as e:
                 print(f"Error reading file {file_name}: {e}")
                 continue
-        # --------- /日志读取代码块 ---------
 
         export_list = []
         durations_small, durations_large = [], []
         FINISH_KEYWORDS = ["分拣报工", "零件入框", "坡口倒棱", "倒棱任务", "放置报工完成", "分拣完成", "桁架分拣完成"]
 
-        # UI 微缩图缓存目录
         thumb_cache_dir = os.path.join(folder_path, ".ui_thumbs_cache")
         if not os.path.exists(thumb_cache_dir): os.makedirs(thumb_cache_dir)
 
@@ -271,11 +264,21 @@ class LogCore:
             '🤍 不参与分拣': (180, 180, 180)  
         }
 
+        # 🌟 获取特定事件的时间的辅助函数
+        def get_event_times(history_list, event_keyword):
+            times = []
+            ptn = re.compile(r"\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\]")
+            for h in history_list:
+                if event_keyword in h:
+                    m = ptn.search(h)
+                    if m: times.append(datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S.%f"))
+            return sorted(times)
+
         for u_id, info in parts_db.items():
             if re.search(r'[\u4e00-\u9fa5]', str(u_id)): continue
             if re.search(r'[\u4e00-\u9fa5]', str(info.get('part_code', ''))): continue
             
-            info['history'].sort() # 严格时序排序防负数
+            info['history'].sort() 
             
             mat = info.get('part_code')
             if mat and mat in temp_station_map:
@@ -310,6 +313,19 @@ class LogCore:
                 else: status = "🟢 正常"
             else: status = "🤍 不参与分拣"
 
+            # 🌟 计算三个特定环节的耗时
+            t_pri_start, t_pri_end = get_event_times(info['history'], '小件一次分拣开始'), get_event_times(info['history'], '小件一次分拣完成')
+            dur_primary = round((t_pri_end[-1] - t_pri_start[0]).total_seconds() / 60, 2) if t_pri_start and t_pri_end else -1.0
+
+            t_sec_start, t_sec_end = get_event_times(info['history'], '小件二次分拣开始'), get_event_times(info['history'], '小件二次分拣完成')
+            dur_secondary = round((t_sec_end[-1] - t_sec_start[0]).total_seconds() / 60, 2) if t_sec_start and t_sec_end else -1.0
+
+            t_pallet = get_event_times(info['history'], '码盘调度完成')
+            dur_pallet = -1.0
+            if len(t_pallet) == 1: dur_pallet = 1.0
+            elif len(t_pallet) > 1: dur_pallet = round((t_pallet[-1] - t_pallet[0]).total_seconds() / 60, 2)
+
+
             part_bgr = ""
             full_image_path = ""
             ui_thumb_path = "" 
@@ -323,7 +339,6 @@ class LogCore:
                     part_bgr = target_data["part_bgr"]
                     full_image_path = target_data["file_path"]
 
-                    # OpenCV 预渲染缓存给 UI (iterations=5)
                     if full_image_path and os.path.exists(full_image_path) and full_image_path.lower().endswith('.png'):
                         try:
                             img_color = cv2.imread(full_image_path, cv2.IMREAD_COLOR)
@@ -352,7 +367,6 @@ class LogCore:
                         except Exception as e:
                             pass
 
-            # 🚀 完全遵循 particle.ipynb 的键名与顺序
             export_list.append({
                 '唯一编号 (Unique ID)': u_id,
                 '零件号 (Part Code)': info.get('part_code', ''),
@@ -360,6 +374,9 @@ class LogCore:
                 '套料图物理路径': full_image_path,
                 '零件类型': info['p_type'],
                 '状态': status,
+                '一次分拣耗时': dur_primary,     # 🌟 新增输出
+                '二次分拣耗时': dur_secondary,   # 🌟 新增输出
+                '码盘调度耗时': dur_pallet,      # 🌟 新增输出
                 'UI微缩图': ui_thumb_path, 
                 '总耗时(分钟)': info['duration_min'], 
                 '任务号': task_no,
@@ -374,7 +391,6 @@ class LogCore:
         if df.empty: return None, "未提取到有效数据"
         return df, "Success"
 
-    # ================= 4. OpenCV 导出带图 Excel =================
     def export_excel_with_images(self, df, save_path):
         print(f"\n🎨 正在生成带图报表: {os.path.basename(save_path)} ...")
         try:
