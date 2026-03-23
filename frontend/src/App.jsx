@@ -14,7 +14,7 @@ const App = () => {
   
   const [uiData, setUiData] = useState({
       error: [], warning: [], normal: [], ignore: [], 
-      pies: { primary: [], secondary: [], pallet: [], total: [] },
+      pies: { primary: [], secondary: [], truss: [], pallet: [], total: [] }, // 新增 truss
       kpi: { total: 0, exceptions: 0 }
   });
 
@@ -133,8 +133,9 @@ const App = () => {
     </div>
   );
 
-  // 🌟 通用的饼图渲染函数
-  const COLORS = { '🟢 正常': '#22c55e', '🟡 警戒': '#f59e0b', '🔴 异常': '#ef4444' };
+  // 🌟 修改：移除了 emoji 的纯文本颜色映射
+  const COLORS = { '正常': '#22c55e', '警戒': '#f59e0b', '异常': '#ef4444' };
+  
   const renderPie = (data, title) => (
       <div className="flex flex-col items-center justify-center h-48 bg-[#020617] rounded-lg border border-[#1e293b] p-2 relative shadow-inner">
           <h4 className="text-[10px] text-slate-400 font-bold mb-1 absolute top-2 left-3 tracking-widest">{title}</h4>
@@ -292,12 +293,13 @@ const App = () => {
                     <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵 (Min)
                   </h3>
                   
-                  {/* 🌟 替换区：从原本的单一 BarChart 替换为 4列的 Grid */}
-                  <div className="flex-1 grid grid-cols-4 gap-4 px-2 items-center">
+                  {/* 🌟 修改：适配 5 个饼图的五列网格 */}
+                  <div className="flex-1 grid grid-cols-5 gap-3 px-2 items-center">
                       {renderPie(uiData.pies?.primary, "① 一次分拣")}
                       {renderPie(uiData.pies?.secondary, "② 二次分拣")}
-                      {renderPie(uiData.pies?.pallet, "③ 码盘调度")}
-                      {renderPie(uiData.pies?.total, "◎ 总体进度 (P90)")}
+                      {renderPie(uiData.pies?.truss, "③ 桁架分拣")}
+                      {renderPie(uiData.pies?.pallet, "④ 码盘调度")}
+                      {renderPie(uiData.pies?.total, "◎ 总体进度")}
                   </div>
                </div>
             </div>

@@ -10,15 +10,10 @@ from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as ExcelImage
 
 class LogCore:
-    """ 
-    数字孪生核心引擎 (基于 particle.ipynb 命名规则的 UI 联动版)
-    """
-    
     PERCENTILE_THRESHOLD = 0.90 
     THUMBNAIL_MAX_DIM = 85 
     CONFIG_FILE = 'ui_config.json'
     
-    # ================= 1. 正则定义 =================
     ID_PATTERN = r"(?:零件?唯一编号|唯一编号|unique id|partCodeUnique|partcodeunique)"
     
     REGEX_TEXT_LOGS = {
@@ -264,7 +259,6 @@ class LogCore:
             '🤍 不参与分拣': (180, 180, 180)  
         }
 
-        # 🌟 获取特定事件的时间的辅助函数
         def get_event_times(history_list, event_keyword):
             times = []
             ptn = re.compile(r"\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\]")
@@ -313,18 +307,20 @@ class LogCore:
                 else: status = "🟢 正常"
             else: status = "🤍 不参与分拣"
 
-            # 🌟 计算三个特定环节的耗时
             t_pri_start, t_pri_end = get_event_times(info['history'], '小件一次分拣开始'), get_event_times(info['history'], '小件一次分拣完成')
             dur_primary = round((t_pri_end[-1] - t_pri_start[0]).total_seconds() / 60, 2) if t_pri_start and t_pri_end else -1.0
 
             t_sec_start, t_sec_end = get_event_times(info['history'], '小件二次分拣开始'), get_event_times(info['history'], '小件二次分拣完成')
             dur_secondary = round((t_sec_end[-1] - t_sec_start[0]).total_seconds() / 60, 2) if t_sec_start and t_sec_end else -1.0
+            
+            # 🌟 新增：提取大件桁架分拣耗时
+            t_truss_start, t_truss_end = get_event_times(info['history'], '大件桁架分拣开始'), get_event_times(info['history'], '大件桁架分拣完成')
+            dur_truss = round((t_truss_end[-1] - t_truss_start[0]).total_seconds() / 60, 2) if t_truss_start and t_truss_end else -1.0
 
             t_pallet = get_event_times(info['history'], '码盘调度完成')
             dur_pallet = -1.0
             if len(t_pallet) == 1: dur_pallet = 1.0
             elif len(t_pallet) > 1: dur_pallet = round((t_pallet[-1] - t_pallet[0]).total_seconds() / 60, 2)
-
 
             part_bgr = ""
             full_image_path = ""
@@ -374,9 +370,10 @@ class LogCore:
                 '套料图物理路径': full_image_path,
                 '零件类型': info['p_type'],
                 '状态': status,
-                '一次分拣耗时': dur_primary,     # 🌟 新增输出
-                '二次分拣耗时': dur_secondary,   # 🌟 新增输出
-                '码盘调度耗时': dur_pallet,      # 🌟 新增输出
+                '一次分拣耗时': dur_primary,
+                '二次分拣耗时': dur_secondary,
+                '桁架分拣耗时': dur_truss,      # 🌟 新增输出
+                '码盘调度耗时': dur_pallet,
                 'UI微缩图': ui_thumb_path, 
                 '总耗时(分钟)': info['duration_min'], 
                 '任务号': task_no,
