@@ -149,7 +149,6 @@ const App = () => {
 
   const COLORS = { '正常': '#22c55e', '警戒': '#f59e0b', '异常': '#ef4444' };
   
-  // 🌟 修改：支持动态百分比半径和高度自适应
   const renderPie = (data, title, stepKey, isLarge = false) => (
       <div className="flex flex-col items-center justify-center w-full h-full min-h-[160px] bg-[#020617] rounded-lg border border-[#1e293b] p-3 relative shadow-inner">
           <h4 className={`font-bold mb-1 absolute top-3 left-4 tracking-widest ${isLarge ? 'text-sm text-blue-400' : 'text-[10px] text-slate-400'}`}>
@@ -186,7 +185,7 @@ const App = () => {
         <div className="h-20 flex items-center px-6 border-b border-[#1e293b] bg-[#0f172a]">
           <Cpu className="text-blue-500 mr-3 shrink-0" size={28} />
           <div>
-            <h1 className="text-base font-black tracking-wider text-slate-100" style={{ fontSize: '85%' }}>华工小筑，数字看板</h1>
+            <h1 className="text-base font-black tracking-wider text-slate-100" style={{ fontSize: '120%' }}>华工小筑，数字看板</h1>
             <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Web API Edition</p>
           </div>
         </div>
@@ -288,7 +287,7 @@ const App = () => {
             <div className="w-[420px] border-r border-[#1e293b] flex flex-col bg-[#0b1120]">
                 <div className="p-5 border-b border-[#1e293b] bg-[#0f172a]">
                     <h3 className="font-bold text-sm text-slate-200 flex items-center tracking-wide">
-                        <Target size={16} className="mr-2 text-blue-500" /> 实体映射清单 (OpenCV)
+                        <Target size={16} className="mr-2 text-blue-500" /> 零件实体映射清单
                     </h3>
                 </div>
                 <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
@@ -306,26 +305,26 @@ const App = () => {
                     <h3 className="text-4xl font-black text-slate-100 font-mono">{uiData.kpi.total}</h3>
                   </div>
                   <div className={`bg-[#0f172a] border rounded-xl p-6 relative overflow-hidden shadow-lg transition-colors ${uiData.kpi.exceptions > 0 ? 'border-red-900/50 bg-red-950/20' : 'border-[#1e293b]'}`}>
-                    <p className="text-sm text-slate-400 font-medium mb-2 uppercase tracking-wider">异常拦截数</p>
+                    <p className="text-sm text-slate-400 font-medium mb-2 uppercase tracking-wider">异常数</p>
                     <h3 className={`text-4xl font-black font-mono ${uiData.kpi.exceptions > 0 ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-100'}`}>{uiData.kpi.exceptions}</h3>
                   </div>
                </div>
 
                <div className="flex-1 bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 flex flex-col overflow-hidden shadow-lg">
                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-6 flex items-center shrink-0">
-                    <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵 (Min)
+                    <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵
                   </h3>
                   
-                  {/* 🌟 修改：采用 1/3 + 2/3 分区，右侧使用 2x2 网格 */}
                   <div className="flex-1 flex gap-4 px-2 pb-2 h-full">
                       <div className="w-1/3 h-full">
-                          {renderPie(uiData.pies?.total, "◎ 总体大盘进度 (P90)", "total", true)}
+                          {/* 🌟 修改标题，删除 P90 */}
+                          {renderPie(uiData.pies?.total, "◎ 总体聚合大盘", "total", true)}
                       </div>
                       
                       <div className="w-2/3 grid grid-cols-2 gap-4 h-full">
-                          {renderPie(uiData.pies?.primary, "① 一次分拣", "primary")}
+                          {renderPie(uiData.pies?.primary, "① 小件一次分拣", "primary")}
                           {renderPie(uiData.pies?.secondary, "② 二次分拣", "secondary")}
-                          {renderPie(uiData.pies?.truss, "③ 桁架分拣", "truss")}
+                          {renderPie(uiData.pies?.truss, "③ 大件桁架分拣", "truss")}
                           {renderPie(uiData.pies?.pallet, "④ 码盘调度", "pallet")}
                       </div>
                   </div>

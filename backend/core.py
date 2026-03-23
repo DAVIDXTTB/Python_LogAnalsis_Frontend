@@ -10,7 +10,6 @@ from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as ExcelImage
 
 class LogCore:
-    PERCENTILE_THRESHOLD = 0.90 
     THUMBNAIL_MAX_DIM = 85 
     CONFIG_FILE = 'ui_config.json'
     
@@ -246,15 +245,15 @@ class LogCore:
                 continue
 
         export_list = []
-        durations_small, durations_large = [], []
         FINISH_KEYWORDS = ["分拣报工", "零件入框", "坡口倒棱", "倒棱任务", "放置报工完成", "分拣完成", "桁架分拣完成"]
 
         thumb_cache_dir = os.path.join(folder_path, ".ui_thumbs_cache")
         if not os.path.exists(thumb_cache_dir): os.makedirs(thumb_cache_dir)
 
+        # 🌟 调整颜色映射字典中的匹配键
         color_map = {
             '🟢 正常': (0, 255, 0),        
-            '🟡 警戒(超时)': (0, 255, 255), 
+            '🟡 警戒': (0, 255, 255), 
             '🔴': (0, 0, 255),             
             '🤍 不参与分拣': (180, 180, 180)  
         }
@@ -286,34 +285,12 @@ class LogCore:
             
             info.update({'duration_min': duration_min, 'is_finished': is_finished, 'p_type': p_type, 't_start': t_start, 't_end': t_end})
 
-            if is_finished and duration_min > 0 and not info.get('specific_error'):
-                if p_type == '小件': durations_small.append(duration_min)
-                elif p_type == '大件': durations_large.append(duration_min)
-
-        thresh_small = np.percentile(durations_small, self.PERCENTILE_THRESHOLD * 100) if durations_small else 5.0
-        thresh_large = np.percentile(durations_large, self.PERCENTILE_THRESHOLD * 100) if durations_large else 10.0
-
-        for u_id, info in parts_db.items():
-            if re.search(r'[\u4e00-\u9fa5]', str(u_id)): continue
-            if re.search(r'[\u4e00-\u9fa5]', str(info.get('part_code', ''))): continue
-
-            status = "🟢 正常"
-            if info.get('specific_error'): status = f"🔴 异常:{info['specific_error']}"
-            elif info['duration_min'] == 0: status = "🤍 不参与分拣"
-            elif info['has_scheduled'] and not info['is_finished']: status = "🔴 异常(丢失)"
-            elif info['duration_min'] > 0 or info['is_finished']:
-                limit = thresh_large if info['p_type'] == '大件' else thresh_small
-                if info['duration_min'] > limit: status = "🟡 警戒(超时)"
-                else: status = "🟢 正常"
-            else: status = "🤍 不参与分拣"
-
             t_pri_start, t_pri_end = get_event_times(info['history'], '小件一次分拣开始'), get_event_times(info['history'], '小件一次分拣完成')
             dur_primary = round((t_pri_end[-1] - t_pri_start[0]).total_seconds() / 60, 2) if t_pri_start and t_pri_end else -1.0
 
             t_sec_start, t_sec_end = get_event_times(info['history'], '小件二次分拣开始'), get_event_times(info['history'], '小件二次分拣完成')
             dur_secondary = round((t_sec_end[-1] - t_sec_start[0]).total_seconds() / 60, 2) if t_sec_start and t_sec_end else -1.0
             
-            # 🌟 新增：提取大件桁架分拣耗时
             t_truss_start, t_truss_end = get_event_times(info['history'], '大件桁架分拣开始'), get_event_times(info['history'], '大件桁架分拣完成')
             dur_truss = round((t_truss_end[-1] - t_truss_start[0]).total_seconds() / 60, 2) if t_truss_start and t_truss_end else -1.0
 
@@ -321,6 +298,43 @@ class LogCore:
             dur_pallet = -1.0
             if len(t_pallet) == 1: dur_pallet = 1.0
             elif len(t_pallet) > 1: dur_pallet = round((t_pallet[-1] - t_pallet[0]).total_seconds() / 60, 2)
+
+            def get_severity(dur, limit_n, limit_w):
+                if dur < 0: return 0
+                if dur <= limit_n: return 0
+                elif dur <= limit_w: return 1
+                else: return 2
+
+            sev_pri = get_severity(dur_primary, 1.0, 30.0)
+            sev_sec = get_severity(dur_secondary, 1.0, 30.0)
+            sev_tru = get_severity(dur_truss, 15.0, 40.0)
+            sev_pal = get_severity(dur_pallet, 1.0, 30.0)
+
+            # 🌟 动态匹配出最高严重等级以及对应的工序名字
+            step_sevs = [
+                (sev_pri, "一次分拣"),
+                (sev_sec, "二次分拣"),
+                (sev_tru, "桁架分拣"),
+                (sev_pal, "码盘调度")
+            ]
+            max_sev = max(s[0] for s in step_sevs)
+            faulty_steps = [s[1] for s in step_sevs if s[0] == max_sev]
+            faulty_name = "+".join(faulty_steps) if faulty_steps else ""
+
+            status = "🟢 正常"
+            if info.get('specific_error'): 
+                status = f"🔴 异常:{info['specific_error']}"
+            elif info['duration_min'] == 0: 
+                status = "🤍 不参与分拣"
+            elif info['has_scheduled'] and not info['is_finished']: 
+                status = "🔴 异常(丢失)"
+            elif info['duration_min'] > 0 or info['is_finished']:
+                # 🌟 应用具体的工序名字
+                if max_sev == 2: status = f"🔴 异常({faulty_name}超时)"
+                elif max_sev == 1: status = f"🟡 警戒({faulty_name}超时)"
+                else: status = "🟢 正常"
+            else: 
+                status = "🤍 不参与分拣"
 
             part_bgr = ""
             full_image_path = ""
@@ -372,7 +386,7 @@ class LogCore:
                 '状态': status,
                 '一次分拣耗时': dur_primary,
                 '二次分拣耗时': dur_secondary,
-                '桁架分拣耗时': dur_truss,      # 🌟 新增输出
+                '桁架分拣耗时': dur_truss,
                 '码盘调度耗时': dur_pallet,
                 'UI微缩图': ui_thumb_path, 
                 '总耗时(分钟)': info['duration_min'], 
