@@ -14,7 +14,7 @@ const App = () => {
   
   const [uiData, setUiData] = useState({
       error: [], warning: [], normal: [], ignore: [], 
-      pies: { primary: [], secondary: [], truss: [], pallet: [], total: [] }, // 新增 truss
+      pies: { primary: [], secondary: [], truss: [], pallet: [], total: [] },
       kpi: { total: 0, exceptions: 0 }
   });
 
@@ -23,6 +23,8 @@ const App = () => {
 
   const [selectedPart, setSelectedPart] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [pieModalConfig, setPieModalConfig] = useState({ isOpen: false, title: '', parts: [] });
 
   useEffect(() => {
     fetchConfig();
@@ -133,22 +135,43 @@ const App = () => {
     </div>
   );
 
-  // 🌟 修改：移除了 emoji 的纯文本颜色映射
+  const handlePieClick = (stepKey, stepTitle, entryData) => {
+      const statusName = entryData.name || entryData.payload?.name;
+      const allParts = [...uiData.error, ...uiData.warning, ...uiData.normal, ...uiData.ignore];
+      const filtered = allParts.filter(p => p.steps && p.steps[stepKey] === statusName);
+      
+      setPieModalConfig({
+          isOpen: true,
+          title: `${stepTitle} - ${statusName} (${filtered.length}件)`,
+          parts: filtered
+      });
+  };
+
   const COLORS = { '正常': '#22c55e', '警戒': '#f59e0b', '异常': '#ef4444' };
   
-  const renderPie = (data, title) => (
-      <div className="flex flex-col items-center justify-center h-48 bg-[#020617] rounded-lg border border-[#1e293b] p-2 relative shadow-inner">
-          <h4 className="text-[10px] text-slate-400 font-bold mb-1 absolute top-2 left-3 tracking-widest">{title}</h4>
+  // 🌟 修改：支持动态百分比半径和高度自适应
+  const renderPie = (data, title, stepKey, isLarge = false) => (
+      <div className="flex flex-col items-center justify-center w-full h-full min-h-[160px] bg-[#020617] rounded-lg border border-[#1e293b] p-3 relative shadow-inner">
+          <h4 className={`font-bold mb-1 absolute top-3 left-4 tracking-widest ${isLarge ? 'text-sm text-blue-400' : 'text-[10px] text-slate-400'}`}>
+              {title}
+          </h4>
           {data && data.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                      <Pie data={data} innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
+                      <Pie 
+                        data={data} 
+                        innerRadius={isLarge ? "55%" : "50%"} 
+                        outerRadius={isLarge ? "80%" : "75%"} 
+                        paddingAngle={2} dataKey="value"
+                        onClick={(entry) => handlePieClick(stepKey, title, entry)}
+                        className="cursor-pointer"
+                      >
                           {data.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[entry.name]} stroke="rgba(0,0,0,0)" />
+                              <Cell key={`cell-${index}`} fill={COLORS[entry.name]} stroke="rgba(0,0,0,0)" className="hover:opacity-80 transition-opacity duration-200" style={{ outline: 'none' }} />
                           ))}
                       </Pie>
                       <RechartsTooltip contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }} itemStyle={{ color: '#fff' }} />
-                      <Legend verticalAlign="bottom" height={20} iconType="circle" wrapperStyle={{fontSize: '10px'}}/>
+                      <Legend verticalAlign="bottom" height={isLarge ? 30 : 20} iconType="circle" wrapperStyle={{ fontSize: isLarge ? '12px' : '10px' }}/>
                   </PieChart>
               </ResponsiveContainer>
           ) : (
@@ -293,20 +316,56 @@ const App = () => {
                     <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵 (Min)
                   </h3>
                   
-                  {/* 🌟 修改：适配 5 个饼图的五列网格 */}
-                  <div className="flex-1 grid grid-cols-5 gap-3 px-2 items-center">
-                      {renderPie(uiData.pies?.primary, "① 一次分拣")}
-                      {renderPie(uiData.pies?.secondary, "② 二次分拣")}
-                      {renderPie(uiData.pies?.truss, "③ 桁架分拣")}
-                      {renderPie(uiData.pies?.pallet, "④ 码盘调度")}
-                      {renderPie(uiData.pies?.total, "◎ 总体进度")}
+                  {/* 🌟 修改：采用 1/3 + 2/3 分区，右侧使用 2x2 网格 */}
+                  <div className="flex-1 flex gap-4 px-2 pb-2 h-full">
+                      <div className="w-1/3 h-full">
+                          {renderPie(uiData.pies?.total, "◎ 总体大盘进度 (P90)", "total", true)}
+                      </div>
+                      
+                      <div className="w-2/3 grid grid-cols-2 gap-4 h-full">
+                          {renderPie(uiData.pies?.primary, "① 一次分拣", "primary")}
+                          {renderPie(uiData.pies?.secondary, "② 二次分拣", "secondary")}
+                          {renderPie(uiData.pies?.truss, "③ 桁架分拣", "truss")}
+                          {renderPie(uiData.pies?.pallet, "④ 码盘调度", "pallet")}
+                      </div>
                   </div>
                </div>
             </div>
         </div>
         
-        {isModalOpen && selectedPart && (
+        {pieModalConfig.isOpen && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
+            <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[600px] max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+              <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">
+                <h3 className="text-lg font-black text-slate-100 flex items-center">
+                    <Target size={20} className="mr-2 text-blue-500" /> 
+                    {pieModalConfig.title}
+                </h3>
+                <button 
+                  onClick={() => setPieModalConfig({ ...pieModalConfig, isOpen: false })}
+                  className="p-2 bg-[#1e293b] rounded-lg text-slate-400 hover:text-white hover:bg-red-500/80 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#020617]">
+                {pieModalConfig.parts.length > 0 ? (
+                    pieModalConfig.parts.map(item => {
+                        const statusColor = item.steps?.total === '异常' ? 'text-red-500' : (item.steps?.total === '警戒' ? 'text-yellow-500' : 'text-green-500');
+                        return renderPartItem(item, statusColor);
+                    })
+                ) : (
+                    <div className="text-center text-slate-500 py-10 text-sm">暂无符合条件的零件</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isModalOpen && selectedPart && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
             <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[500px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               
               <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">

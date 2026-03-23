@@ -72,7 +72,6 @@ def analyze_data(date_folder: str, refresh: bool = False):
         'pies': {}
     }
 
-    # 🌟 修改：去掉了字首的表情符号，并新增了 truss 桁架的分类
     pies_counts = {
         'primary': {'正常': 0, '警戒': 0, '异常': 0},
         'secondary': {'正常': 0, '警戒': 0, '异常': 0},
@@ -81,10 +80,10 @@ def analyze_data(date_folder: str, refresh: bool = False):
         'total': {'正常': 0, '警戒': 0, '异常': 0}
     }
 
-    def categorize(dur):
+    def categorize(dur, limit_normal=1.0, limit_warn=30.0):
         if dur < 0: return None
-        if dur <= 1.0: return '正常'
-        elif dur <= 30.0: return '警戒'
+        if dur <= limit_normal: return '正常'
+        elif dur <= limit_warn: return '警戒'
         else: return '异常'
     
     for row in records:
@@ -98,30 +97,35 @@ def analyze_data(date_folder: str, refresh: bool = False):
         history_raw = row.get('完整流程追踪', '')
         history_list = history_raw.split('\n') if history_raw else []
         
+        # 🌟 修改：提前执行分类函数
+        cat_pri = categorize(row.get('一次分拣耗时', -1.0))
+        cat_sec = categorize(row.get('二次分拣耗时', -1.0))
+        cat_truss = categorize(row.get('桁架分拣耗时', -1.0), limit_normal=15.0, limit_warn=40.0)
+        cat_pal = categorize(row.get('码盘调度耗时', -1.0))
+
+        total_cat = '正常'
+        if '🔴' in status: total_cat = '异常'
+        elif '🟡' in status: total_cat = '警戒'
+        
+        # 🌟 修改：将步骤详情打入 item 数据节点
         item = {
             'uid': uid, 'part_no': part_no, 'status': status, 'duration': duration, 
-            'img_url': img_url, 'history': history_list
+            'img_url': img_url, 'history': history_list,
+            'steps': {
+                'primary': cat_pri,
+                'secondary': cat_sec,
+                'truss': cat_truss,
+                'pallet': cat_pal,
+                'total': total_cat
+            }
         }
         
-        cat_pri = categorize(row.get('一次分拣耗时', -1.0))
         if cat_pri: pies_counts['primary'][cat_pri] += 1
-            
-        cat_sec = categorize(row.get('二次分拣耗时', -1.0))
         if cat_sec: pies_counts['secondary'][cat_sec] += 1
-
-        # 🌟 录入桁架数据    
-        cat_truss = categorize(row.get('桁架分拣耗时', -1.0))
         if cat_truss: pies_counts['truss'][cat_truss] += 1
-            
-        cat_pal = categorize(row.get('码盘调度耗时', -1.0))
         if cat_pal: pies_counts['pallet'][cat_pal] += 1
-            
-        # 🌟 更新总进度的纯文本匹配
-        if '🔴' in status: pies_counts['total']['异常'] += 1
-        elif '🟡' in status: pies_counts['total']['警戒'] += 1
-        elif '🟢' in status: pies_counts['total']['正常'] += 1
+        pies_counts['total'][total_cat] += 1
 
-        # 左侧列表依旧保留原本带有 emoji 的状态文本，以保证列表好看
         if '🔴' in status: 
             ui_data['error'].append(item)
             ui_data['kpi']['exceptions'] += 1
@@ -134,7 +138,7 @@ def analyze_data(date_folder: str, refresh: bool = False):
     ui_data['pies'] = {
         'primary': format_pie(pies_counts['primary']),
         'secondary': format_pie(pies_counts['secondary']),
-        'truss': format_pie(pies_counts['truss']), # 新增
+        'truss': format_pie(pies_counts['truss']),
         'pallet': format_pie(pies_counts['pallet']),
         'total': format_pie(pies_counts['total'])
     }
