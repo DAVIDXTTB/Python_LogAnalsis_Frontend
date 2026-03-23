@@ -80,7 +80,18 @@ def analyze_data(date_folder: str, refresh: bool = False):
         # 🌟 核心修改：返回相对路径给前端
         img_url = f"/thumbs/{date_folder}/{uid}.png" if row.get('UI微缩图') else None
         
-        item = {'uid': uid, 'part_no': part_no, 'status': status, 'duration': duration, 'img_url': img_url}
+        # 🌟 提取并切割完整流程追踪数据
+        history_raw = row.get('完整流程追踪', '')
+        history_list = history_raw.split('\n') if history_raw else []
+        
+        item = {
+            'uid': uid, 
+            'part_no': part_no, 
+            'status': status, 
+            'duration': duration, 
+            'img_url': img_url,
+            'history': history_list
+        }
         
         if '🔴' in status: 
             ui_data['error'].append(item)

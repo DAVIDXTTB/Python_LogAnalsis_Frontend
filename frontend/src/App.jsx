@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList 
 } from 'recharts';
 import { 
-  Cpu, Calendar, Settings, Activity, Clock, Target, Download, RefreshCw
+  Cpu, Calendar, Settings, Activity, Clock, Target, Download, RefreshCw, X
 } from 'lucide-react';
 
 const App = () => {
@@ -20,6 +20,9 @@ const App = () => {
   const [config, setConfig] = useState({ log_root: '', nesting_root: '' });
   const [showConfig, setShowConfig] = useState(false);
 
+  const [selectedPart, setSelectedPart] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   useEffect(() => {
     fetchConfig();
     fetchDates();
@@ -27,7 +30,6 @@ const App = () => {
 
   const fetchConfig = async () => {
     try {
-      // 🌟 修改为相对路径
       const res = await fetch('/api/config');
       const data = await res.json();
       setConfig(data);
@@ -36,7 +38,6 @@ const App = () => {
 
   const fetchDates = async () => {
     try {
-      // 🌟 修改为相对路径
       const res = await fetch('/api/dates');
       const data = await res.json();
       setDatesList(data);
@@ -50,7 +51,6 @@ const App = () => {
 
   const saveConfig = async () => {
     try {
-      // 🌟 修改为相对路径
       await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +67,6 @@ const App = () => {
     setStatusMsg(forceRefresh ? `🔄 强制让后端重新解析 ${dateStr} 日志...` : `🚀 正在获取 ${dateStr} 数据...`);
     
     try {
-      // 🌟 修改为相对路径
       const response = await fetch(`/api/analyze?date_folder=${dateStr}&refresh=${forceRefresh}`);
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();
@@ -90,7 +89,6 @@ const App = () => {
     setIsLoading(true);
     setStatusMsg("📦 正在由后端 OpenCV 引擎打包带图 Excel，请稍候...");
     try {
-      // 🌟 修改为相对路径
       const response = await fetch(`/api/export?date_folder=${selectedDate}`);
       if (!response.ok) throw new Error("导出失败");
       
@@ -114,7 +112,11 @@ const App = () => {
   const sortedChartData = [...uiData.chart].sort((a, b) => b.time - a.time);
 
   const renderPartItem = (item, colorClass) => (
-    <div key={item.uid} className="flex justify-between items-center p-3 mb-3 bg-[#1e293b] border border-[#334155] rounded-xl hover:bg-[#0f172a] transition-colors">
+    <div 
+      key={item.uid} 
+      onClick={() => { setSelectedPart(item); setIsModalOpen(true); }}
+      className="cursor-pointer flex justify-between items-center p-3 mb-3 bg-[#1e293b] border border-[#334155] rounded-xl hover:bg-[#334155] transition-colors"
+    >
       <div className="flex-1">
         <div className={`font-bold text-sm ${colorClass}`}>{item.part_no}</div>
         <div className="text-xs text-slate-400 font-mono mt-1">UID: {item.uid}</div>
@@ -140,7 +142,7 @@ const App = () => {
         <div className="h-20 flex items-center px-6 border-b border-[#1e293b] bg-[#0f172a]">
           <Cpu className="text-blue-500 mr-3 shrink-0" size={28} />
           <div>
-            <h1 className="text-base font-black tracking-wider text-slate-100">数字孪生看板</h1>
+            <h1 className="text-base font-black tracking-wider text-slate-100" style={{ fontSize: '100%' }}>华工小筑·生产数字看板</h1>
             <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Web API Edition</p>
           </div>
         </div>
@@ -270,21 +272,27 @@ const App = () => {
 
                <div className="flex-1 bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 flex flex-col overflow-hidden shadow-lg">
                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-6 flex items-center shrink-0">
-                    <Activity size={16} className="mr-2 text-blue-500" /> 全局耗时分布 (Min)
+                    <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布
                   </h3>
                   <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
                       {sortedChartData.length > 0 ? (
                         <div style={{ height: Math.max(400, sortedChartData.length * 40) }}>
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={sortedChartData} layout="vertical" margin={{ right: 40, left: 10 }}>
+                            <BarChart data={sortedChartData} layout="vertical" margin={{ right: 60, left: 10 }}>
                               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#1e293b" />
                               <XAxis type="number" hide />
                               <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11, fontFamily: 'monospace'}} width={110} />
                               <RechartsTooltip cursor={{fill: '#1e293b'}} contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }} />
                               <Bar dataKey="time" barSize={16} radius={[0, 4, 4, 0]}>
                                 {sortedChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.status.includes('🔴') ? '#ef4444' : entry.status.includes('🟡') ? '#f59e0b' : '#3b82f6'} />
+                                  <Cell key={`cell-${index}`} fill={entry.status.includes('🔴') ? '#ef4444' : entry.status.includes('🟡') ? '#f59e0b' : '#22c55e'} />
                                 ))}
+                                <LabelList 
+                                    dataKey="time" 
+                                    position="right" 
+                                    formatter={(value) => `${value}m`} 
+                                    style={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'monospace', fontWeight: 'bold' }} 
+                                />
                               </Bar>
                             </BarChart>
                           </ResponsiveContainer>
@@ -294,6 +302,50 @@ const App = () => {
                </div>
             </div>
         </div>
+        
+        {/* ================= 🌟 二级界面：零件历史记录弹窗 ================= */}
+        {isModalOpen && selectedPart && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
+            <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[500px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+              <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">
+                <div>
+                  <h3 className="text-lg font-black text-slate-100">{selectedPart.part_no}</h3>
+                  <p className="text-xs text-slate-400 font-mono mt-1">UID: {selectedPart.uid} | 耗时: {selectedPart.duration}m</p>
+                </div>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 bg-[#1e293b] rounded-lg text-slate-400 hover:text-white hover:bg-red-500/80 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#020617]">
+                {selectedPart.history && selectedPart.history.length > 0 ? (
+                  <div className="relative border-l border-[#334155] ml-3 space-y-6">
+                    {selectedPart.history.map((log, idx) => {
+                      const match = log.match(/\[(.*?)\] (.*)/);
+                      const time = match ? match[1] : '';
+                      const action = match ? match[2] : log;
+                      const isError = action.includes('异常') || action.includes('超时');
+
+                      return (
+                        <div key={idx} className="relative pl-6">
+                          <div className={`absolute -left-1.5 top-1 w-3 h-3 rounded-full border-2 border-[#020617] ${isError ? 'bg-red-500' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]'}`}></div>
+                          <div className={`text-sm font-bold ${isError ? 'text-red-400' : 'text-slate-200'}`}>{action}</div>
+                          <div className="text-xs text-slate-500 font-mono mt-1">{time}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center text-slate-500 py-10 text-sm">暂无流程记录数据</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
