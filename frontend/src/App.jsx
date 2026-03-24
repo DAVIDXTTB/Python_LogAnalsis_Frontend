@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { 
-  Cpu, Calendar, Settings, Activity, Clock, Target, Download, RefreshCw, X
+  Calendar, Settings, Activity, Clock, Target, Download, RefreshCw, X
 } from 'lucide-react';
 
 const App = () => {
@@ -180,232 +180,248 @@ const App = () => {
   );
 
   return (
-    <div className="flex w-screen h-screen bg-[#020617] text-slate-200 overflow-hidden font-sans">
-      <aside className="w-72 bg-[#0b1120] border-r border-[#1e293b] flex flex-col z-20 shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
-        <div className="h-20 flex items-center px-6 border-b border-[#1e293b] bg-[#0f172a]">
-          <Cpu className="text-blue-500 mr-3 shrink-0" size={28} />
-          <div>
-            <h1 className="text-base font-black tracking-wider text-slate-100" style={{ fontSize: '120%' }}>华工小筑，数字看板</h1>
-            <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Web API Edition</p>
+    <div className="flex flex-col w-screen h-screen bg-[#020617] text-slate-200 overflow-hidden font-sans">
+      
+      {/* ================= 🌟 1. 全局统一顶部导航栏 ================= */}
+      <header className="py-4 px-6 flex items-center justify-between border-b border-[#1e293b] bg-[#0b1120] shrink-0 z-30 shadow-md">
+        
+        {/* 左侧：Logo图片 + 上下排版的(标题与状态) */}
+        <div className="flex items-center flex-1">
+          {/* 🌟 核心修改区：替换为真实的图片 Logo */}
+          <img 
+            src="/logo.jpg" 
+            alt="Brand Logo" 
+            className="h-10 w-auto object-contain mr-4 shrink-0 rounded-sm shadow-sm" 
+          />
+          
+          <div className="flex flex-col justify-center">
+            {/* 第一行：主标题 */}
+            <h1 className="text-lg font-bold tracking-widest text-slate-100 drop-shadow-sm mb-0.5">
+              华工小筑·数字看板
+            </h1>
+            
+            {/* 第二行：实时状态 */}
+            <div className="flex items-center mt-1.5">
+              <div className="w-1.5 h-4 bg-blue-500 mr-3 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+              <p className="text-sm font-medium text-slate-400 font-mono flex items-center tracking-wide">
+                {statusMsg}
+                {isLoading && <div className="ml-3 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 py-6 overflow-y-auto custom-scrollbar">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 px-6 flex items-center">
-            <Calendar size={14} className="mr-2" /> 历史批次
-          </h2>
-          <div className="space-y-2 px-4">
-            {datesList.length > 0 ? datesList.map(date => (
-              <button
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                disabled={isLoading}
-                className={`appearance-none outline-none w-full flex items-center text-left px-4 py-3 rounded-lg text-sm transition-all border
-                  ${selectedDate === date 
-                    ? 'border-blue-500 bg-[#1e40af]/30 text-blue-400 font-bold shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
-                    : 'border-transparent bg-[#1e293b] text-slate-400 hover:bg-[#334155] hover:text-slate-200'}`}
-              >
-                <span className="font-medium font-mono">{date}</span>
-              </button>
-            )) : (
-              <div className="text-xs text-slate-600 text-center py-4 bg-[#0f172a] rounded mx-2 border border-[#1e293b] border-dashed">无批次数据</div>
-            )}
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-[#1e293b] bg-[#0f172a]">
+        {/* 右侧：操作按钮 */}
+        <div className="flex items-center gap-4 shrink-0">
           <button 
-            onClick={() => setShowConfig(!showConfig)} 
-            className="appearance-none outline-none w-full flex items-center justify-center px-4 py-3 rounded-lg text-sm font-bold bg-[#1e293b] border border-[#334155] text-slate-300 hover:bg-[#334155] hover:text-white transition-colors"
+              onClick={() => fetchDailyData(selectedDate, true)} 
+              disabled={!selectedDate || isLoading}
+              className={`appearance-none outline-none flex items-center px-4 py-2.5 rounded-lg text-sm font-bold transition-all border
+                  ${(!selectedDate || isLoading) 
+                      ? 'bg-[#1e293b] text-slate-500 border-transparent cursor-not-allowed' 
+                      : 'bg-[#0f172a] hover:bg-[#1e293b] text-slate-300 border-[#334155] hover:text-white'}`}
           >
-            <Settings size={16} className="mr-2" /> 引擎配置中心
+              <RefreshCw size={16} className="mr-2" />
+              获取最新实况
+          </button>
+          
+          <button 
+              onClick={handleExport} 
+              disabled={!selectedDate || isLoading}
+              className={`appearance-none outline-none flex items-center px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg
+                  ${(!selectedDate || isLoading) 
+                      ? 'bg-[#1e293b] text-slate-500 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'}`}
+          >
+              <Download size={16} className="mr-2" />
+              下载可视化报表
           </button>
         </div>
-      </aside>
+      </header>
 
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-[#020617]">
-        {showConfig && (
-            <div className="absolute top-0 left-0 w-full bg-[#0f172a]/95 backdrop-blur-md border-b border-[#1e293b] p-8 z-50 shadow-2xl">
-                <h3 className="text-lg font-bold mb-6 flex items-center text-slate-100"><Settings className="mr-2 text-blue-400"/> Python 后端路径映射配置</h3>
-                <div className="space-y-5 max-w-3xl">
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Log 根目录绝对路径</label>
-                        <input type="text" value={config.log_root} onChange={e => setConfig({...config, log_root: e.target.value})} className="appearance-none w-full bg-[#020617] border border-[#334155] rounded-lg p-3 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition-colors" placeholder="例如: /Volumes/uuu/60上logtest" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">套料图物理库路径 (VISUALNESTING)</label>
-                        <input type="text" value={config.nesting_root} onChange={e => setConfig({...config, nesting_root: e.target.value})} className="appearance-none w-full bg-[#020617] border border-[#334155] rounded-lg p-3 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition-colors" placeholder="例如: /Volumes/uuu/60上logtest/VISUALNESTING" />
-                    </div>
-                    <div className="flex gap-4 pt-4">
-                        <button onClick={saveConfig} className="appearance-none outline-none bg-blue-600 hover:bg-blue-500 px-8 py-2.5 rounded-lg text-sm font-bold text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all">💾 保存并通知引擎</button>
-                        <button onClick={() => setShowConfig(false)} className="appearance-none outline-none bg-[#1e293b] hover:bg-[#334155] border border-[#334155] px-8 py-2.5 rounded-lg text-sm text-slate-300 transition-all">取消</button>
-                    </div>
-                </div>
+      {/* ================= 🌟 2. 下方主体工作区 ================= */}
+      <div className="flex flex-1 overflow-hidden">
+        
+        {/* 左侧 侧边栏 */}
+        <aside className="w-72 bg-[#0b1120] border-r border-[#1e293b] flex flex-col z-20 shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
+          <div className="flex-1 py-6 overflow-y-auto custom-scrollbar">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 px-6 flex items-center">
+              <Calendar size={14} className="mr-2" /> 历史批次
+            </h2>
+            <div className="space-y-2 px-4">
+              {datesList.length > 0 ? datesList.map(date => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  disabled={isLoading}
+                  className={`appearance-none outline-none w-full flex items-center text-left px-4 py-3 rounded-lg text-sm transition-all border
+                    ${selectedDate === date 
+                      ? 'border-blue-500 bg-[#1e40af]/30 text-blue-400 font-bold shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
+                      : 'border-transparent bg-[#1e293b] text-slate-400 hover:bg-[#334155] hover:text-slate-200'}`}
+                >
+                  <span className="font-medium font-mono">{date}</span>
+                </button>
+              )) : (
+                <div className="text-xs text-slate-600 text-center py-4 bg-[#0f172a] rounded mx-2 border border-[#1e293b] border-dashed">无批次数据</div>
+              )}
             </div>
-        )}
+          </div>
 
-        <header className="h-20 px-8 flex items-center justify-between border-b border-[#1e293b] bg-[#0b1120] shrink-0">
-          <div className="flex items-center">
-            <div className="w-2 h-8 bg-blue-500 mr-4 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-            <div>
-              <h2 className="text-xl font-black text-slate-100 flex items-center">
-                批次分析大屏 {selectedDate && <span className="text-blue-400 ml-2">- {selectedDate}</span>}
-                {isLoading && <div className="ml-3 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
-              </h2>
-              <p className="text-xs text-slate-400 mt-1 font-mono">{statusMsg}</p>
-            </div>
+          <div className="p-4 border-t border-[#1e293b] bg-[#0f172a]">
+            <button 
+              onClick={() => setShowConfig(!showConfig)} 
+              className="appearance-none outline-none w-full flex items-center justify-center px-4 py-3 rounded-lg text-sm font-bold bg-[#1e293b] border border-[#334155] text-slate-300 hover:bg-[#334155] hover:text-white transition-colors"
+            >
+              <Settings size={16} className="mr-2" /> 引擎配置中心
+            </button>
+          </div>
+        </aside>
+
+        {/* 右侧 主内容区 */}
+        <main className="flex-1 flex flex-col relative overflow-hidden bg-[#020617]">
+          {showConfig && (
+              <div className="absolute top-0 left-0 w-full bg-[#0f172a]/95 backdrop-blur-md border-b border-[#1e293b] p-8 z-50 shadow-2xl">
+                  <h3 className="text-lg font-bold mb-6 flex items-center text-slate-100"><Settings className="mr-2 text-blue-400"/> Python 后端路径映射配置</h3>
+                  <div className="space-y-5 max-w-3xl">
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Log 根目录绝对路径</label>
+                          <input type="text" value={config.log_root} onChange={e => setConfig({...config, log_root: e.target.value})} className="appearance-none w-full bg-[#020617] border border-[#334155] rounded-lg p-3 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition-colors" placeholder="例如: /Volumes/uuu/60上logtest" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">套料图物理库路径 (VISUALNESTING)</label>
+                          <input type="text" value={config.nesting_root} onChange={e => setConfig({...config, nesting_root: e.target.value})} className="appearance-none w-full bg-[#020617] border border-[#334155] rounded-lg p-3 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition-colors" placeholder="例如: /Volumes/uuu/60上logtest/VISUALNESTING" />
+                      </div>
+                      <div className="flex gap-4 pt-4">
+                          <button onClick={saveConfig} className="appearance-none outline-none bg-blue-600 hover:bg-blue-500 px-8 py-2.5 rounded-lg text-sm font-bold text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all">💾 保存并通知引擎</button>
+                          <button onClick={() => setShowConfig(false)} className="appearance-none outline-none bg-[#1e293b] hover:bg-[#334155] border border-[#334155] px-8 py-2.5 rounded-lg text-sm text-slate-300 transition-all">取消</button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          <div className={`flex-1 overflow-hidden flex transition-opacity duration-300 ${isLoading ? 'opacity-30' : 'opacity-100'}`}>
+              <div className="w-[420px] border-r border-[#1e293b] flex flex-col bg-[#0b1120]">
+                  <div className="p-5 border-b border-[#1e293b] bg-[#0f172a]">
+                      <h3 className="font-bold text-sm text-slate-200 flex items-center tracking-wide">
+                          <Target size={16} className="mr-2 text-blue-500" /> 实体映射清单 (OpenCV)
+                      </h3>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                      {uiData.error.map(item => renderPartItem(item, 'text-red-500'))}
+                      {uiData.warning.map(item => renderPartItem(item, 'text-yellow-500'))}
+                      {uiData.normal.map(item => renderPartItem(item, 'text-green-500'))}
+                  </div>
+              </div>
+
+              <div className="flex-1 p-8 flex flex-col bg-[#020617]">
+                 <div className="grid grid-cols-2 gap-8 mb-8 shrink-0">
+                    <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 relative overflow-hidden shadow-lg">
+                      <div className="absolute right-0 top-0 w-24 h-24 bg-blue-500/5 rounded-bl-full -mr-4 -mt-4"></div>
+                      <p className="text-sm text-slate-400 font-medium mb-2 uppercase tracking-wider">处理总零件数</p>
+                      <h3 className="text-4xl font-black text-slate-100 font-mono">{uiData.kpi.total}</h3>
+                    </div>
+                    <div className={`bg-[#0f172a] border rounded-xl p-6 relative overflow-hidden shadow-lg transition-colors ${uiData.kpi.exceptions > 0 ? 'border-red-900/50 bg-red-950/20' : 'border-[#1e293b]'}`}>
+                      <p className="text-sm text-slate-400 font-medium mb-2 uppercase tracking-wider">异常拦截数</p>
+                      <h3 className={`text-4xl font-black font-mono ${uiData.kpi.exceptions > 0 ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-100'}`}>{uiData.kpi.exceptions}</h3>
+                    </div>
+                 </div>
+
+                 <div className="flex-1 bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 flex flex-col overflow-hidden shadow-lg">
+                    <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-6 flex items-center shrink-0">
+                      <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵 (Min)
+                    </h3>
+                    
+                    <div className="flex-1 flex gap-4 px-2 pb-2 h-full">
+                        <div className="w-1/3 h-full">
+                            {renderPie(uiData.pies?.total, "◎ 总体聚合大盘", "total", true)}
+                        </div>
+                        
+                        <div className="w-2/3 grid grid-cols-2 gap-4 h-full">
+                            {renderPie(uiData.pies?.primary, "① 一次分拣", "primary")}
+                            {renderPie(uiData.pies?.secondary, "② 二次分拣", "secondary")}
+                            {renderPie(uiData.pies?.truss, "③ 桁架分拣", "truss")}
+                            {renderPie(uiData.pies?.pallet, "④ 码盘调度", "pallet")}
+                        </div>
+                    </div>
+                 </div>
+              </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <button 
-                onClick={() => fetchDailyData(selectedDate, true)} 
-                disabled={!selectedDate || isLoading}
-                className={`appearance-none outline-none flex items-center px-4 py-2.5 rounded-lg text-sm font-bold transition-all border
-                    ${(!selectedDate || isLoading) 
-                        ? 'bg-[#1e293b] text-slate-500 border-transparent cursor-not-allowed' 
-                        : 'bg-[#0f172a] hover:bg-[#1e293b] text-slate-300 border-[#334155] hover:text-white'}`}
-            >
-                <RefreshCw size={16} className="mr-2" />
-                获取最新实况
-            </button>
-            
-            <button 
-                onClick={handleExport} 
-                disabled={!selectedDate || isLoading}
-                className={`appearance-none outline-none flex items-center px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg
-                    ${(!selectedDate || isLoading) 
-                        ? 'bg-[#1e293b] text-slate-500 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'}`}
-            >
-                <Download size={16} className="mr-2" />
-                下载可视化报表
-            </button>
-          </div>
-        </header>
-
-        <div className={`flex-1 overflow-hidden flex transition-opacity duration-300 ${isLoading ? 'opacity-30' : 'opacity-100'}`}>
-            <div className="w-[420px] border-r border-[#1e293b] flex flex-col bg-[#0b1120]">
-                <div className="p-5 border-b border-[#1e293b] bg-[#0f172a]">
-                    <h3 className="font-bold text-sm text-slate-200 flex items-center tracking-wide">
-                        <Target size={16} className="mr-2 text-blue-500" /> 零件实体映射清单
-                    </h3>
-                </div>
-                <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-                    {uiData.error.map(item => renderPartItem(item, 'text-red-500'))}
-                    {uiData.warning.map(item => renderPartItem(item, 'text-yellow-500'))}
-                    {uiData.normal.map(item => renderPartItem(item, 'text-green-500'))}
-                </div>
-            </div>
-
-            <div className="flex-1 p-8 flex flex-col bg-[#020617]">
-               <div className="grid grid-cols-2 gap-8 mb-8 shrink-0">
-                  <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 relative overflow-hidden shadow-lg">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-blue-500/5 rounded-bl-full -mr-4 -mt-4"></div>
-                    <p className="text-sm text-slate-400 font-medium mb-2 uppercase tracking-wider">处理总零件数</p>
-                    <h3 className="text-4xl font-black text-slate-100 font-mono">{uiData.kpi.total}</h3>
-                  </div>
-                  <div className={`bg-[#0f172a] border rounded-xl p-6 relative overflow-hidden shadow-lg transition-colors ${uiData.kpi.exceptions > 0 ? 'border-red-900/50 bg-red-950/20' : 'border-[#1e293b]'}`}>
-                    <p className="text-sm text-slate-400 font-medium mb-2 uppercase tracking-wider">异常数</p>
-                    <h3 className={`text-4xl font-black font-mono ${uiData.kpi.exceptions > 0 ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-slate-100'}`}>{uiData.kpi.exceptions}</h3>
-                  </div>
-               </div>
-
-               <div className="flex-1 bg-[#0f172a] border border-[#1e293b] rounded-xl p-6 flex flex-col overflow-hidden shadow-lg">
-                  <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-6 flex items-center shrink-0">
-                    <Activity size={16} className="mr-2 text-green-500" /> 全局耗时分布矩阵
+          {pieModalConfig.isOpen && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
+              <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[600px] max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                
+                <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">
+                  <h3 className="text-lg font-black text-slate-100 flex items-center">
+                      <Target size={20} className="mr-2 text-blue-500" /> 
+                      {pieModalConfig.title}
                   </h3>
-                  
-                  <div className="flex-1 flex gap-4 px-2 pb-2 h-full">
-                      <div className="w-1/3 h-full">
-                          {/* 🌟 修改标题，删除 P90 */}
-                          {renderPie(uiData.pies?.total, "◎ 总体聚合大盘", "total", true)}
-                      </div>
-                      
-                      <div className="w-2/3 grid grid-cols-2 gap-4 h-full">
-                          {renderPie(uiData.pies?.primary, "① 小件一次分拣", "primary")}
-                          {renderPie(uiData.pies?.secondary, "② 二次分拣", "secondary")}
-                          {renderPie(uiData.pies?.truss, "③ 大件桁架分拣", "truss")}
-                          {renderPie(uiData.pies?.pallet, "④ 码盘调度", "pallet")}
-                      </div>
-                  </div>
-               </div>
-            </div>
-        </div>
-        
-        {pieModalConfig.isOpen && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
-            <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[600px] max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              
-              <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">
-                <h3 className="text-lg font-black text-slate-100 flex items-center">
-                    <Target size={20} className="mr-2 text-blue-500" /> 
-                    {pieModalConfig.title}
-                </h3>
-                <button 
-                  onClick={() => setPieModalConfig({ ...pieModalConfig, isOpen: false })}
-                  className="p-2 bg-[#1e293b] rounded-lg text-slate-400 hover:text-white hover:bg-red-500/80 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#020617]">
-                {pieModalConfig.parts.length > 0 ? (
-                    pieModalConfig.parts.map(item => {
-                        const statusColor = item.steps?.total === '异常' ? 'text-red-500' : (item.steps?.total === '警戒' ? 'text-yellow-500' : 'text-green-500');
-                        return renderPartItem(item, statusColor);
-                    })
-                ) : (
-                    <div className="text-center text-slate-500 py-10 text-sm">暂无符合条件的零件</div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {isModalOpen && selectedPart && (
-          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
-            <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[500px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              
-              <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">
-                <div>
-                  <h3 className="text-lg font-black text-slate-100">{selectedPart.part_no}</h3>
-                  <p className="text-xs text-slate-400 font-mono mt-1">UID: {selectedPart.uid} | 耗时: {selectedPart.duration}m</p>
+                  <button 
+                    onClick={() => setPieModalConfig({ ...pieModalConfig, isOpen: false })}
+                    className="p-2 bg-[#1e293b] rounded-lg text-slate-400 hover:text-white hover:bg-red-500/80 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 bg-[#1e293b] rounded-lg text-slate-400 hover:text-white hover:bg-red-500/80 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
 
-              <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#020617]">
-                {selectedPart.history && selectedPart.history.length > 0 ? (
-                  <div className="relative border-l border-[#334155] ml-3 space-y-6">
-                    {selectedPart.history.map((log, idx) => {
-                      const match = log.match(/\[(.*?)\] (.*)/);
-                      const time = match ? match[1] : '';
-                      const action = match ? match[2] : log;
-                      const isError = action.includes('异常') || action.includes('超时');
-
-                      return (
-                        <div key={idx} className="relative pl-6">
-                          <div className={`absolute -left-1.5 top-1 w-3 h-3 rounded-full border-2 border-[#020617] ${isError ? 'bg-red-500' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]'}`}></div>
-                          <div className={`text-sm font-bold ${isError ? 'text-red-400' : 'text-slate-200'}`}>{action}</div>
-                          <div className="text-xs text-slate-500 font-mono mt-1">{time}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center text-slate-500 py-10 text-sm">暂无流程记录数据</div>
-                )}
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#020617]">
+                  {pieModalConfig.parts.length > 0 ? (
+                      pieModalConfig.parts.map(item => {
+                          const statusColor = item.steps?.total === '异常' ? 'text-red-500' : (item.steps?.total === '警戒' ? 'text-yellow-500' : 'text-green-500');
+                          return renderPartItem(item, statusColor);
+                      })
+                  ) : (
+                      <div className="text-center text-slate-500 py-10 text-sm">暂无符合条件的零件</div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+
+          {isModalOpen && selectedPart && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm">
+              <div className="bg-[#0f172a] border border-[#1e293b] rounded-2xl w-[500px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                
+                <div className="flex items-center justify-between p-5 border-b border-[#1e293b] bg-[#0b1120]">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-100">{selectedPart.part_no}</h3>
+                    <p className="text-xs text-slate-400 font-mono mt-1">UID: {selectedPart.uid} | 耗时: {selectedPart.duration}m</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsModalOpen(false)}
+                    className="p-2 bg-[#1e293b] rounded-lg text-slate-400 hover:text-white hover:bg-red-500/80 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#020617]">
+                  {selectedPart.history && selectedPart.history.length > 0 ? (
+                    <div className="relative border-l border-[#334155] ml-3 space-y-6">
+                      {selectedPart.history.map((log, idx) => {
+                        const match = log.match(/\[(.*?)\] (.*)/);
+                        const time = match ? match[1] : '';
+                        const action = match ? match[2] : log;
+                        const isError = action.includes('异常') || action.includes('超时');
+
+                        return (
+                          <div key={idx} className="relative pl-6">
+                            <div className={`absolute -left-1.5 top-1 w-3 h-3 rounded-full border-2 border-[#020617] ${isError ? 'bg-red-500' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]'}`}></div>
+                            <div className={`text-sm font-bold ${isError ? 'text-red-400' : 'text-slate-200'}`}>{action}</div>
+                            <div className="text-xs text-slate-500 font-mono mt-1">{time}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center text-slate-500 py-10 text-sm">暂无流程记录数据</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };
