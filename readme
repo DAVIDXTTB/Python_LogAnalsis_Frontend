@@ -1,0 +1,74 @@
+# 🏭 华工小筑·产线数字孪生看板 (Log Analysis Dashboard)
+
+本项目是一个前后端分离的工业级数据监控与分析平台。系统通过解析产线底层的复杂日志，实现对零件全生命周期流转的精准追踪、多工序耗时瓶颈分析，并结合 OpenCV 动态生成带有状态标识的套料图纸微缩图，最终通过极佳交互体验的响应式大屏进行可视化展示。
+
+## 🛠️ 技术栈 (Tech Stack)
+* **前端**: React 19, Vite, TailwindCSS 4, Recharts, Lucide-React
+* **后端**: Python 3.10+, FastAPI, Pandas, OpenCV, OpenPyXL
+* **工程化**: Concurrently (支持前后端一键联动启动)
+
+---
+
+## ⚙️ 1. 部署与环境准备
+
+在首次运行前，请确保本地已安装以下环境：
+1. **Node.js**: 建议 v18.x 或以上版本。
+2. **Python**: 建议 v3.10 或以上版本。
+
+### 前端环境安装
+将frontend里面的package.json,这一行"api": "cd ../backend && /Users/tantianxing/INTERNSHIP-Company/1-28/.conda/bin/python server.py", 其中的/Users/tantianxing/INTERNSHIP-Company/1-28/.conda/bin/python 改为本机的python路径即可，如果在backend里配置了虚拟py环境，则直接用"api": "cd ../backend && python server.py",替换
+```bash
+# 进入前端目录
+cd frontend
+
+# 安装前端所有依赖 (包含 React, Tailwind, Concurrently 等)
+npm install
+
+# 进入后端目录
+cd backend
+
+# (强烈建议) 创建并激活 Python 虚拟环境，也可以使用现有py环境
+python -m venv venv
+# Windows 激活: venv\Scripts\activate
+# Mac/Linux 激活: source venv/bin/activate
+
+# 安装后端算法与服务依赖
+pip install -r requirements.txt
+
+🚀 2. 本地启动服务
+本项目配置了极简启动脚本，无需繁琐地开启多个终端窗口。
+
+确保你的终端当前位于 frontend 目录下，并已激活 Python 虚拟环境（如使用），直接运行：
+
+Bash
+# 在 frontend 目录下执行：
+npm run start
+💡 启动说明：
+该命令会利用 concurrently 库同时拉起【后端 Python API 引擎】与【前端 Vite UI 服务】。
+当终端出现 🚀 启动孪生看板 API 服务... 端口: 8000 以及 Vite 的 Local: http://localhost:5173/ 访问链接时，即代表全栈启动成功，在浏览器中打开链接即可。
+
+(附：如果你想分别独立观察前后端日志，也可以在 backend 目录单独运行 python server.py，在 frontend 目录单独运行 npm run dev。)
+
+📂 3. 首次运行配置 (必读)
+由于本系统底层需解析数百兆的工业日志和图纸，代码仓库中未包含测试数据。首次启动系统后，界面暂无数据，请务必完成以下配置：
+
+向开发团队获取最新的产线测试日志文件夹（需包含 .log 日志及 VISUALNESTING 图纸库）。
+
+在浏览器中打开前端看板，点击左下角的 【⚙️ 引擎配置中心】。
+
+填入你本地存放日志和图纸的绝对路径：
+
+Log 根目录：如 D:/logtest 或 /Volumes/U盘/logtest
+
+图库路径：如 D:/logtest/VISUALNESTING
+
+点击 [保存并通知引擎]。
+
+成功后，左侧边栏将自动识别历史批次日期，点击右上角 [获取最新实况] 即可完成数据挂载与渲染。
+
+✨ 核心业务价值
+精准的工序瓶颈定位：采用基于“木桶效应”的 SLA 预警算法。单一工序（如桁架分拣）发生超时，系统将自动向上穿透并亮起红灯。
+
+全生命周期交互溯源：支持多级数据下钻。点击大盘色块过滤异常零件，再次点击可查看精确到毫秒级的完整流转时间轴。
+
+自动化带图报表交付：后端集成 OpenCV 引擎，一键导出包含高亮图元的 Excel 分析报表，极大提升车间管理效能。
