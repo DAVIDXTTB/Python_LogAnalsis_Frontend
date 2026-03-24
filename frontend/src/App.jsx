@@ -187,25 +187,25 @@ const App = () => {
         
         {/* 左侧：Logo图片 + 上下排版的(标题与状态) */}
         <div className="flex items-center flex-1">
-          {/* 🌟 核心修改区：替换为真实的图片 Logo */}
+          {/* 🌟 修改点 1：高度放大到 h-[46px] */}
           <img 
             src="/logo.jpg" 
             alt="Brand Logo" 
-            className="h-10 w-auto object-contain mr-4 shrink-0 rounded-sm shadow-sm" 
+            className="h-[70px] w-auto object-contain mr-4 shrink-0 rounded-sm shadow-sm" 
           />
           
           <div className="flex flex-col justify-center">
-            {/* 第一行：主标题 */}
-            <h1 className="text-lg font-bold tracking-widest text-slate-100 drop-shadow-sm mb-0.5">
-              华工小筑·数字看板
-            </h1>
+            {/* 🌟 修改点 2：字号缩小到 text-base */}
+            <div className="!text-[36px] font-bold tracking-widest text-slate-100 drop-shadow-sm mb-0.5">
+  华工小筑·数字看板
+</div>
             
-            {/* 第二行：实时状态 */}
+            {/* 第二行：实时状态 (保持之前的放大设置) */}
             <div className="flex items-center mt-1.5">
-              <div className="w-1.5 h-4 bg-blue-500 mr-3 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
-              <p className="text-sm font-medium text-slate-400 font-mono flex items-center tracking-wide">
+              <div className="w-2 h-5 bg-blue-500 mr-3 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.9)]"></div>
+              <p className="text-sm font-medium text-slate-300 font-mono flex items-center tracking-wide">
                 {statusMsg}
-                {isLoading && <div className="ml-3 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
+                {isLoading && <div className="ml-3 w-5 h-5 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin"></div>}
               </p>
             </div>
           </div>
